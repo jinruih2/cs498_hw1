@@ -16,7 +16,11 @@ def server(params, opt, world):
     # your code here: receive gradients form worker, and add them to agg#
     #                                                                   #
     #                                                                   #
-
+    for worker_rank in range(1,world):
+        worker_grad = torch.zeros_like(flat_grad)
+        dist.recv(worker_grad,src=worker_rank)
+        agg += worker_grad
+    agg /= world
     synced_grads = _unflatten_dense_tensors(agg, [p.grad for p in params])
     # ---- set averaged grads locally & step ----
     for g, s in zip([p.grad for p in params], synced_grads):
@@ -30,6 +34,8 @@ def server(params, opt, world):
     # your code here: send packed 1-D parameter tensor to all workers   #
     #                                                                   #
     #                                                                   #
+    for worker_rank in range(1,world):
+        dist.send(flat_param, dst=worker_rank)
 
 def worker(params):
     flat_grad = _flatten_dense_tensors([p.grad for p in params]).contiguous()
@@ -40,15 +46,16 @@ def worker(params):
     # your code here: send packed 1-D gradient to server
     #                                                                   #
     #                                                                   #
-
+    dist.send(flat_grad, dst=0)
     # ---- receive updated params, write into local model ----
-    
+    synced_flat = torch.zeros_like(flat_grad)
+    dist.recv(synced_flat,src=0)
     #                                                                   #
     #                                                                   #
     # your code here: please get correct 1-D packed parameter from server
     #           And then unpacked it and store in synced_params
     #                                                                   #
-    synced_params = None #you should  assign correct value for synced_params#
+    synced_params = _unflatten_dense_tensors(synced_flat, [p.data for p in params]) #you should  assign correct value for synced_params#
 
 
     # ---- syncronize the parameters ----
