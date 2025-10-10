@@ -21,7 +21,7 @@ def reduce_scatter(chunks, tmp, world, rank, left, right):
         chunks[recv_rank] += tmp
     return
         
-def all_gather(chunks, tmp, current, world, rank, left, right):
+def all_gather(chunks, tmp, world, rank, left, right):
     #                                                                   #
     #                                                                   #
     # your code here: follow slides instruction: do counter-clockwise iteration
